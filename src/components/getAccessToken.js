@@ -10,7 +10,7 @@ export const getAccessToken = async () => {
     url: 'http://withdocs1.herokuapp.com/api/v11/user/meetingtoken',
     headers: {
       Authorization:
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWVkNDA3Mzk4NWE1MDQyOWM0NWI4MjkiLCJyb2xlIjoicGF0aWVudCIsImlhdCI6MTY1NzM3NTk5NCwiZXhwIjoxNjU3NDYyMzk0fQ.sPVcgXCaE-4tan4CyigkVDZBNVBDxxVKVIG7lIBysqk',
+        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWVkNDA3Mzk4NWE1MDQyOWM0NWI4MjkiLCJyb2xlIjoicGF0aWVudCIsImlhdCI6MTY1NzQ2NzE0MCwiZXhwIjoxNjU3NTUzNTQwfQ.Rs-DaiNyDX-Q1AGjsjlmTgUmHUOTt0XnLvUPx6NbnrQ',
       'Content-Type': 'application/json',
     },
     data: data,
@@ -18,7 +18,6 @@ export const getAccessToken = async () => {
 
   return await axios(config)
     .then(function (response) {
-      console.log(response);
       return response.data;
     })
     .catch(function (error) {

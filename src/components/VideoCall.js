@@ -1,0 +1,221 @@
+import { useState, useEffect } from 'react';
+import { useMicrophoneAndCameraTracks } from './settings.js';
+import Video from './Video';
+import { getAccessToken } from './getAccessToken.js';
+import { createClient } from 'agora-rtc-react';
+
+export default function VideoCall(props) {
+  const { setInCall } = props;
+  const [users, setUsers] = useState([]);
+  const [start, setStart] = useState(false);
+  const { ready, tracks } = useMicrophoneAndCameraTracks();
+  const [config, setConfig] = useState();
+  const [channelName, setChannelName] = useState();
+  const [patientUid, setPatientUid] = useState();
+  const [client, setClient] = useState();
+  const [notifications, setNotifications] = useState({});
+
+  useEffect(() => {
+    setLocalState();
+  }, []);
+
+  useEffect(() => {
+    if (client) {
+      const clientStats = client.getRTCStats();
+      console.log('Stats: ', clientStats);
+    }
+  }, [users]);
+
+  const setLocalState = async () => {
+    let tokenDetails = await getAccessToken();
+    console.log(tokenDetails);
+    if (tokenDetails) {
+      setChannelName(tokenDetails.channel_name);
+      setPatientUid(tokenDetails.patient_uid);
+      const configurations = {
+        mode: 'rtc',
+        codec: 'vp8',
+        appId: tokenDetails.app_id,
+        token: tokenDetails.token_patient,
+      };
+      setConfig(configurations);
+      const createdClient = createClient(configurations);
+      setClient(createdClient);
+    }
+  };
+
+  useEffect(() => {
+    let init = async (name) => {
+      if (client && config) {
+        try {
+          await client.join(config.appId, name, config.token, patientUid);
+          setNotifications({
+            msg: 'Joined the channel successfully',
+            duration: 3000,
+            position: 'top-right',
+          });
+        } catch (error) {
+          console.log('error');
+        }
+
+        if (tracks) await client.publish([tracks[0], tracks[1]]);
+        setStart(true);
+
+        client.on('user-joined', (user) => {
+          console.log('Joined user: ', user);
+          setNotifications({
+            msg: 'User joined the channel',
+            duration: 3000,
+            position: 'top-right',
+          });
+        });
+        client.on('user-published', (user, mediaType) => {
+          client
+            .subscribe(user, mediaType)
+            .then(() => console.log('Subscribed'))
+            .catch((err) => console.log(err));
+
+          if (mediaType === 'video') {
+            setUsers((prevUsers) => {
+              return [...prevUsers, user];
+            });
+          }
+          if (mediaType === 'audio') {
+            if (user.audioTrack) {
+              user.audioTrack.play();
+            }
+          }
+        });
+
+        client.on('network-quality', (stats) => {
+          // console.log('downlinkNetworkQuality', stats.downlinkNetworkQuality);
+          // console.log('uplinkNetworkQuality', stats.uplinkNetworkQuality);
+          if (
+            stats.downlinkNetworkQuality > 3 ||
+            stats.uplinkNetworkQuality > 3
+          ) {
+            setNotifications({
+              msg: 'Poor Network Quality',
+              duration: 1000,
+              position: 'top-right',
+            });
+          }
+        });
+
+        client.on('connection-state-change', (curState, revState) => {
+          console.log('here');
+          if (curState === 'RECONNECTING' && revState === 'CONNECTED') {
+            console.log('Reconnected to the channel');
+            setNotifications({
+              msg: 'Reconnected to the channel',
+              duration: 1000,
+              position: 'top-right',
+            });
+          } else if (curState === 'DISCONNECTED' && revState === 'CONNECTED') {
+            console.log('Disconnected from the channel');
+            setNotifications({
+              msg: 'Disconnected from the channel',
+              duration: 1000,
+              position: 'top-right',
+            });
+          } else if (curState === 'CONNECTED' && revState === 'DISCONNECTED') {
+            console.log('Connected to the channel');
+            setNotifications({
+              msg: 'Connected to the channel',
+              duration: 1000,
+              position: 'top-right',
+            });
+          }
+        });
+
+        client.on('token-privilege-will-expire', async function () {
+          setNotifications({
+            msg: 'Call will end in 30 seconds',
+            duration: 3000,
+            position: 'top-right',
+          });
+
+          // After requesting a new token
+          // await client.renewToken(token);
+        });
+
+        client.on('token-privilege-did-expire', async () => {
+          setNotifications({
+            msg: 'Call ended',
+            duration: 3000,
+            position: 'top-right',
+          });
+          // After requesting a new token
+          // await client.join(<APPID>, <CHANNEL NAME>, <NEW TOKEN>);
+        });
+
+        client.on('user-unpublished', (user, mediaType) => {
+          if (mediaType === 'audio') {
+            if (user.audioTrack) {
+              user.audioTrack.stop();
+            }
+          }
+          if (mediaType === 'video') {
+            setUsers((prevUsers) => {
+              return prevUsers.filter((User) => User.uid !== user.uid);
+            });
+          }
+        });
+
+        client.on('user-left', (user) => {
+          setUsers((prevUsers) => {
+            return prevUsers.filter((User) => User.uid !== user.uid);
+          });
+          setNotifications({
+            msg: 'User left the channel',
+            duration: 3000,
+            position: 'top-right',
+          });
+        });
+
+        client.on('exception', function (evt) {
+          console.log(evt.code, evt.msg, evt.uid);
+          if (evt.code === 1002 || evt.code === 1003) {
+            setNotifications({
+              msg: 'Poor Video Quality',
+              duration: 1000,
+              position: 'top-right',
+            });
+          }
+          if (evt.code === 2001 || evt.code === 2003) {
+            setNotifications({
+              msg: 'Poor Audio Quality',
+              duration: 1000,
+              position: 'top-right',
+            });
+          }
+        });
+      }
+      // AgoraRTC.enableLogUpload();
+      // AgoraRTC.setLogLevel(0);
+    };
+
+    if (ready && tracks) {
+      try {
+        init(channelName);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }, [client, ready, tracks]);
+
+  return (
+    <div style={{ height: '100%' }}>
+      {start && tracks && (
+        <Video
+          tracks={tracks}
+          users={users}
+          setStart={setStart}
+          setInCall={setInCall}
+          config={config}
+          notifications={notifications}
+        />
+      )}
+    </div>
+  );
+}
