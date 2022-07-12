@@ -10,7 +10,7 @@ export const getAccessToken = async () => {
     url: 'http://withdocs1.herokuapp.com/api/v11/user/meetingtoken',
     headers: {
       Authorization:
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWVkNDA3Mzk4NWE1MDQyOWM0NWI4MjkiLCJyb2xlIjoicGF0aWVudCIsImlhdCI6MTY1NzQ2NzE0MCwiZXhwIjoxNjU3NTUzNTQwfQ.Rs-DaiNyDX-Q1AGjsjlmTgUmHUOTt0XnLvUPx6NbnrQ',
+        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MWVkNDA3Mzk4NWE1MDQyOWM0NWI4MjkiLCJyb2xlIjoicGF0aWVudCIsImlhdCI6MTY1NzYxODIxOCwiZXhwIjoxNjU3NzA0NjE4fQ.osxPCleFUTSQijTUmoh3KXiuujXo5KUo6qbuS4pWYBw',
       'Content-Type': 'application/json',
     },
     data: data,

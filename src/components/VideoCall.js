@@ -14,6 +14,13 @@ export default function VideoCall(props) {
   const [patientUid, setPatientUid] = useState();
   const [client, setClient] = useState();
   const [notifications, setNotifications] = useState({});
+  const [disconnected, setDisconnected] = useState({
+    user: '',
+    status: false,
+    count: 0,
+  });
+  const [reconnected, setReconnected] = useState({ user: '', count: 0 });
+  const [timeRemaining, setTimeRemaining] = useState(null);
 
   useEffect(() => {
     setLocalState();
@@ -23,8 +30,27 @@ export default function VideoCall(props) {
     if (client) {
       const clientStats = client.getRTCStats();
       console.log('Stats: ', clientStats);
+
+      if (!timeRemaining) setTimeRemaining(900 - clientStats.Duration);
     }
   }, [users]);
+
+  // if (clientStats.Duration >= 600 && clientStats.Duration < 900) {
+  //   setNotifications({
+  //     msg: '5 minutes left',
+  //     duration: 3000,
+  //     position: 'top-right',
+  //   });
+  // } else if (clientStats.Duration >= 840 && clientStats.Duration < 900) {
+  //   if (window.confirm('Do you wish to extend the meeting by 2 minutes?'))
+  //     alert('Meeting extended by 2 minutes.');
+  // } else if (clientStats.Duration >= 900) {
+  //   setNotifications({
+  //     msg: 'Time limit reached. Meeting is about to end.',
+  //     duration: 3000,
+  //     position: 'top-right',
+  //   });
+  // }
 
   const setLocalState = async () => {
     let tokenDetails = await getAccessToken();
@@ -63,11 +89,27 @@ export default function VideoCall(props) {
 
         client.on('user-joined', (user) => {
           console.log('Joined user: ', user);
-          setNotifications({
-            msg: 'User joined the channel',
-            duration: 3000,
-            position: 'top-right',
-          });
+          // console.log(disconnected, user);
+          if (user.uid == disconnected.user && disconnected.status) {
+            setNotifications({
+              msg: 'User reconnected to the channel',
+              duration: 3000,
+              position: 'top-right',
+            });
+
+            setReconnected((ps) => {
+              return { ...ps, user: user.uid, count: ps.count + 1 };
+            });
+            setDisconnected((ps) => {
+              return { ...ps, status: false };
+            });
+          } else {
+            setNotifications({
+              msg: 'User joined the channel',
+              duration: 3000,
+              position: 'top-right',
+            });
+          }
         });
         client.on('user-published', (user, mediaType) => {
           client
@@ -88,8 +130,6 @@ export default function VideoCall(props) {
         });
 
         client.on('network-quality', (stats) => {
-          // console.log('downlinkNetworkQuality', stats.downlinkNetworkQuality);
-          // console.log('uplinkNetworkQuality', stats.uplinkNetworkQuality);
           if (
             stats.downlinkNetworkQuality > 3 ||
             stats.uplinkNetworkQuality > 3
@@ -102,31 +142,24 @@ export default function VideoCall(props) {
           }
         });
 
-        client.on('connection-state-change', (curState, revState) => {
-          console.log('here');
-          if (curState === 'RECONNECTING' && revState === 'CONNECTED') {
-            console.log('Reconnected to the channel');
-            setNotifications({
-              msg: 'Reconnected to the channel',
-              duration: 1000,
-              position: 'top-right',
-            });
-          } else if (curState === 'DISCONNECTED' && revState === 'CONNECTED') {
-            console.log('Disconnected from the channel');
-            setNotifications({
-              msg: 'Disconnected from the channel',
-              duration: 1000,
-              position: 'top-right',
-            });
-          } else if (curState === 'CONNECTED' && revState === 'DISCONNECTED') {
-            console.log('Connected to the channel');
-            setNotifications({
-              msg: 'Connected to the channel',
-              duration: 1000,
-              position: 'top-right',
-            });
-          }
-        });
+        // client.on('connection-state-change', (curState, revState) => {
+        //   console.log('here');
+        //   if (curState === 'DISCONNECTED' && revState === 'RECONNECTING') {
+        //     console.log('Disconnected from the channel');
+        //     setNotifications({
+        //       msg: 'Disconnected from the channel',
+        //       duration: 1000,
+        //       position: 'top-right',
+        //     });
+        //   } else if (curState === 'CONNECTING' && revState === 'DISCONNECTED') {
+        //     console.log('Connected to the channel');
+        //     setNotifications({
+        //       msg: 'Connected to the channel',
+        //       duration: 1000,
+        //       position: 'top-right',
+        //     });
+        //   }
+        // });
 
         client.on('token-privilege-will-expire', async function () {
           setNotifications({
@@ -162,15 +195,31 @@ export default function VideoCall(props) {
           }
         });
 
-        client.on('user-left', (user) => {
+        client.on('user-left', (user, reason) => {
           setUsers((prevUsers) => {
             return prevUsers.filter((User) => User.uid !== user.uid);
           });
-          setNotifications({
-            msg: 'User left the channel',
-            duration: 3000,
-            position: 'top-right',
+          setDisconnected((ps) => {
+            return {
+              ...ps,
+              user: user.uid,
+              status: true,
+              count: ps.count + 1,
+            };
           });
+          if (reason === 'ServerTimeOut') {
+            setNotifications({
+              msg: 'User disconnected from the channel',
+              duration: 3000,
+              position: 'top-right',
+            });
+          } else {
+            setNotifications({
+              msg: 'User left the channel',
+              duration: 3000,
+              position: 'top-right',
+            });
+          }
         });
 
         client.on('exception', function (evt) {

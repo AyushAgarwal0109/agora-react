@@ -12,7 +12,7 @@ export default function Video(props) {
   // Control buttons functionality
   const [trackState, setTrackState] = useState({ video: true, audio: true });
   const [client, setClient] = useState();
-  const [joinedUsers, setJoinedUsers] = useState(users);
+  const [tmpUsers, setTmpUsers] = useState(users);
 
   useEffect(() => {
     let createdClient = createClient(config);
@@ -26,6 +26,11 @@ export default function Video(props) {
       position: notifications.position,
     });
   }, [notifications]);
+
+  // Update tmpUsers every time new user joins or leaves
+  useEffect(() => {
+    setTmpUsers(users);
+  }, [users]);
 
   // Mute audio/video + notifications
   const mute = async (type) => {
@@ -52,16 +57,18 @@ export default function Video(props) {
 
   // Leave the channel
   const leaveChannel = async () => {
-    await client.leave();
-    client.removeAllListeners();
-    tracks[0].close();
-    tracks[1].close();
-    setStart(false);
-    setInCall(false);
-    toast.success('Left the channel', {
-      duration: 3000,
-      position: 'top-right',
-    });
+    if (window.confirm('Are you sure you want to leave the channel?')) {
+      await client.leave();
+      client.removeAllListeners();
+      tracks[0].close();
+      tracks[1].close();
+      setStart(false);
+      setInCall(false);
+      toast.success('Left the channel', {
+        duration: 3000,
+        position: 'top-right',
+      });
+    }
   };
 
   return (
@@ -185,45 +192,85 @@ export default function Video(props) {
       <div className='app-main'>
         <div className='video-call-wrapper'>
           <div className='video-participant video-doctor'>
-            <div className='participant-actions'>
-              <button className='btn-mute'></button>
-              <button className='btn-camera'></button>
+            <div className='participant-actions' style={{ zIndex: '2' }}>
+              <div className='btn-mute'>
+                <i
+                  className={
+                    trackState.audio
+                      ? 'fa-solid fa-microphone'
+                      : 'fa-solid fa-microphone-slash'
+                  }
+                  style={{ color: '#fff' }}
+                ></i>
+              </div>
+              <div className='btn-camera'>
+                <i
+                  className={
+                    trackState.video
+                      ? 'fa-solid fa-video'
+                      : 'fa-solid fa-video-slash'
+                  }
+                  style={{ color: '#fff' }}
+                ></i>
+              </div>
             </div>
-            <a href='/' className='name-tag'>
+            <div className='name-tag' style={{ zIndex: '2' }}>
               Dr. Swapnil Katare
-            </a>
+            </div>
             <AgoraVideoPlayer
               videoTrack={tracks[1]}
               style={{ height: '100%', width: '100%' }}
             />
           </div>
-          <Draggable style={{ zIndex: '2' }}>
-            <div className='video-participant video-patient'>
-              {console.log('Users:-', joinedUsers)}
-              {joinedUsers &&
-                joinedUsers.length > 0 &&
-                joinedUsers.map((user) => {
-                  if (user.videoTrack) {
-                    return (
-                      <>
-                        <div className='participant-actions'>
-                          <button className='btn-mute'></button>
-                          <button className='btn-camera'></button>
+          {console.log('Users:-', users)}
+          {tmpUsers &&
+            tmpUsers.length > 0 &&
+            tmpUsers.map((user) => {
+              if (user.videoTrack || user._videoTrack) {
+                return (
+                  <Draggable>
+                    <div
+                      className='video-participant video-patient'
+                      style={{ zIndex: '2' }}
+                    >
+                      <div
+                        className='participant-actions'
+                        style={{ zIndex: '2' }}
+                      >
+                        <div className='btn-mute'>
+                          <i
+                            className={
+                              !user._audio_muted_
+                                ? 'fa-solid fa-microphone'
+                                : 'fa-solid fa-microphone-slash'
+                            }
+                            style={{ color: '#fff' }}
+                          ></i>
                         </div>
-                        <a href='/' className='name-tag'>
-                          Ayush Agarwal
-                        </a>
-                        <AgoraVideoPlayer
-                          videoTrack={user.videoTrack}
-                          key={user.uid}
-                          style={{ height: '100%', width: '100%' }}
-                        />
-                      </>
-                    );
-                  } else return null;
-                })}
-            </div>
-          </Draggable>
+                        <div className='btn-camera'>
+                          <i
+                            className={
+                              !user._video_muted_
+                                ? 'fa-solid fa-video'
+                                : 'fa-solid fa-video-slash'
+                            }
+                            style={{ color: '#fff' }}
+                          ></i>
+                        </div>
+                      </div>
+                      <div className='name-tag' style={{ zIndex: '3' }}>
+                        Ayush Agarwal
+                      </div>
+                      <AgoraVideoPlayer
+                        videoTrack={user.videoTrack || user._videoTrack}
+                        key={user.uid}
+                        style={{ height: '100%', width: '100%' }}
+                      />
+                    </div>
+                  </Draggable>
+                );
+              } else return null;
+            })}
         </div>
         <div className='video-call-actions '>
           <button
