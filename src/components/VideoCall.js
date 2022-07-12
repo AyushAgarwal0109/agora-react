@@ -5,7 +5,7 @@ import { getAccessToken } from './getAccessToken.js';
 import { createClient } from 'agora-rtc-react';
 
 export default function VideoCall(props) {
-  const { setInCall } = props;
+  const { setInCall, token, channel } = props;
   const [users, setUsers] = useState([]);
   const [start, setStart] = useState(false);
   const { ready, tracks } = useMicrophoneAndCameraTracks();
@@ -53,21 +53,17 @@ export default function VideoCall(props) {
   // }
 
   const setLocalState = async () => {
-    let tokenDetails = await getAccessToken();
-    console.log(tokenDetails);
-    if (tokenDetails) {
-      setChannelName(tokenDetails.channel_name);
-      setPatientUid(tokenDetails.patient_uid);
-      const configurations = {
-        mode: 'rtc',
-        codec: 'vp8',
-        appId: tokenDetails.app_id,
-        token: tokenDetails.token_patient,
-      };
-      setConfig(configurations);
-      const createdClient = createClient(configurations);
-      setClient(createdClient);
-    }
+    setChannelName(channel);
+    setPatientUid('61f1008b4776a22710c932c2');
+    const configurations = {
+      mode: 'rtc',
+      codec: 'vp8',
+      appId: '65b90aaaa55941c98656335b181c00db',
+      token: token,
+    };
+    setConfig(configurations);
+    const createdClient = createClient(configurations);
+    setClient(createdClient);
   };
 
   useEffect(() => {
