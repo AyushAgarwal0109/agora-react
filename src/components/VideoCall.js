@@ -42,8 +42,9 @@ export default function VideoCall(props) {
   //     position: 'top-right',
   //   });
   // } else if (clientStats.Duration >= 840 && clientStats.Duration < 900) {
-  //   if (window.confirm('Do you wish to extend the meeting by 2 minutes?'))
+  //   if (window.confirm('Do you wish to extend the meeting by 2 minutes?')) {
   //     alert('Meeting extended by 2 minutes.');
+  //   }
   // } else if (clientStats.Duration >= 900) {
   //   setNotifications({
   //     msg: 'Time limit reached. Meeting is about to end.',
@@ -53,17 +54,25 @@ export default function VideoCall(props) {
   // }
 
   const setLocalState = async () => {
-    setChannelName(channel);
-    setPatientUid('61f1008b4776a22710c932c2');
-    const configurations = {
-      mode: 'rtc',
-      codec: 'vp8',
-      appId: '65b90aaaa55941c98656335b181c00db',
-      token: token,
-    };
-    setConfig(configurations);
-    const createdClient = createClient(configurations);
-    setClient(createdClient);
+    try {
+      let tokenDetails = await getAccessToken(channel, token);
+      console.log(tokenDetails);
+      if (tokenDetails) {
+        setChannelName(tokenDetails.channel_name);
+        setPatientUid(tokenDetails.uid);
+        const configurations = {
+          mode: 'rtc',
+          codec: 'vp8',
+          appId: tokenDetails.app_id,
+          token: tokenDetails.token,
+        };
+        setConfig(configurations);
+        const createdClient = createClient(configurations);
+        setClient(createdClient);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   useEffect(() => {
