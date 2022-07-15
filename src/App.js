@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import '../src/assets/css/Video_UI.css';
 import VideoCall from './components/VideoCall';
 
 function App() {

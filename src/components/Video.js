@@ -30,7 +30,7 @@ export default function Video(props) {
   // Update tmpUsers every time new user joins or leaves
   useEffect(() => {
     setTmpUsers(users);
-  }, [users]);
+  }, [users, notifications]);
 
   // Mute audio/video + notifications
   const mute = async (type) => {
