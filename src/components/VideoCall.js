@@ -79,12 +79,7 @@ export default function VideoCall(props) {
     let init = async (name) => {
       if (client && config) {
         try {
-          await client.join(
-            config.appId,
-            name,
-            config.token,
-            parseInt(patientUid)
-          );
+          await client.join(config.appId, name, config.token, patientUid);
           setNotifications({
             msg: 'Joined the channel successfully',
             duration: 3000,
